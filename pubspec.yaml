@@ -1,0 +1,38 @@
+---
+name: mx_env
+description: A new Flutter plugin.
+version: 1.0.0+1
+author: 
+homepage: 
+environment:
+  sdk: ">=2.7.0 <3.0.0"
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  json_annotation: "^3.0.0"
+  annotation_route: "^0.0.2"
+  xson_annotation: "^1.0.0"
+  type_translator: "^1.0.2+1"
+  mx_core:
+    git:
+      url: git@github.com:MagicalWater/Base-APP-Core.git
+  app_updater:
+    git:
+      url: git@github.com:MagicalWater/Base-APP-Updater.git
+
+dependency_overrides:
+  image: "^2.1.12"
+dev_dependencies:
+  mx_json:
+    git:
+      url: git@github.com:MagicalWater/Base-APP-JsonBean.git
+  json_serializable: "^3.2.2"
+  build_runner: "^1.6.8"
+flutter:
+  plugin:
+    androidPackage: com.i2xc.mx_env
+    pluginClass: MxEnvPlugin
+  assets:
+  - assets/jsons/

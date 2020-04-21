@@ -1,0 +1,33 @@
+{
+    "config": {
+        "web": "http://m.baba88.cc/"
+    },
+    "android": {
+        "message": "",
+        "versionName": "0.1.3",
+        "versionCode": 13,
+        "dev": {
+            "url": "https://apps99.cc/streamDo/debug/apk/debug.apk",
+            "openWeb": false
+        },
+        "product": {
+            "url": "https://apps99.cc/streamDo/product/apk/release.apk",
+            "openWeb": false
+        },
+        "ignore": false
+    },
+    "ios": {
+        "message": "",
+        "versionName": "0.1.3",
+        "versionCode": 13,
+        "dev": {
+            "url": "itms-services:///?action=download-manifest&url=https://apps99.cc/streamDo/debug.plist",
+            "openWeb": true
+        },
+        "product": {
+            "url": "itms-services:///?action=download-manifest&url=https://apps99.cc/streamDo/product.plist",
+            "openWeb": true
+        },
+        "ignore": false
+    }
+}
