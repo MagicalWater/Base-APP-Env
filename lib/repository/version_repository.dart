@@ -1,213 +1,155 @@
-import 'dart:io';
-
-import 'package:app_updater/app_updater.dart';
-import 'package:mx_env/app_build_type.dart';
-import 'package:mx_env/bean/bean_converter.dart';
-import 'package:mx_env/service/version_request_service.dart';
-import 'package:package_info/package_info.dart';
-import 'package:rxdart/rxdart.dart';
+part of 'package:mx_env/mx_env.dart';
 
 /// 版本相關倉庫
-class VersionRepository {
-  final _service = VersionRequestService();
+class _VersionRepository {
+  final _request = VersionRequestClient();
 
-  static final VersionRepository _instance = VersionRepository._();
+  ProductBean? _productListCache;
 
-  VersionRepository._();
+  /// 檢查版本是否為product版本
+  bool _isReleaseVersionProduct(
+      {required String verName, required int verCode}) {
+    var webProducts = (Platform.isAndroid
+            ? _productListCache!.android
+            : _productListCache!.ios) ??
+        [];
 
-  static VersionRepository getInstance() => _instance;
+    // 專案是否為 product
+    bool isProduct = webProducts.any((product) {
+      var code = product.versionCode;
+      var name = product.versionName;
+      return code == verCode && name == verName;
+    });
 
-  factory VersionRepository() => getInstance();
-
-  /// 下載更新進度串流
-  Stream<DownloadData> get updateStream => AppUpdater.downloadStream;
-
-  /// 取得當前專案環境
-  AppBuildType get appBuildType => _buildTypeSubject.value?.appBuildType;
-
-  /// 監聽專案環境Stream
-  Stream<AppBuildType> get buildTypeStream =>
-      _buildTypeSubject.stream.where((v) => !v.ignore).map((v) => v.appBuildType);
-
-  /// 專案環境Subject
-  BehaviorSubject<BuildTypeData> _buildTypeSubject = BehaviorSubject();
-
-  /// 設置專案環境
-  /// [ignore] 是否忽略更新subject串流
-  void setAppBuildType(AppBuildType buildType, {bool ignore = false}) {
-    print("mx_env 檢測到設置專案環境 ${buildType.name}");
-    _buildTypeSubject.add(BuildTypeData(ignore, buildType));
+    return isProduct;
   }
 
-  /// 取得更新App資訊
-  /// [appCode] 專案名稱 ex：streamFk、streamDo、media
-  Observable<UpdateInfo> getUpdateInfo(String appCode) {
-    bool isAndroid = Platform.isAndroid;
-    Observable<PackageInfo> packageInfoObs = Observable.fromFuture(PackageInfo.fromPlatform());
+  void _setUrl(Uri url) {
+    _request.host = url.host;
+    _request.scheme = url.scheme;
+  }
 
-    if (appBuildType == null) {
-      throw "appBuildType為空，請先設置setAppBuildType";
-    }
+  /// 更新專案環境
+  /// 當專案版本為 [ProjectBuild.release] 時, 檢查版本號是否為 product 版本
+  /// 若檢查為 product, 則會自動更改 [MxEnv.build] 的值
+  Stream<ProjectVersion> updateProjectBuild() {
+    Stream<PackageInfo> infoStream =
+        Stream.fromFuture(PackageInfo.fromPlatform());
 
-    return Observable.zip2<PackageInfo, ProductBean, CurrentVersionData>(packageInfoObs, _getProduct(appCode),
-        (packageInfo, productBean) {
-      var targets = isAndroid ? productBean.android : productBean.ios;
+    Stream<ProductBean> productStream = _getProductList();
 
-      // 判斷是否為product
-      bool isProduct = targets.any((target) =>
-          target?.versionCode?.toString() == packageInfo.buildNumber &&
-          target?.versionName == packageInfo.version);
+    return ZipStream.zip2<PackageInfo, ProductBean, ProjectVersion>(
+      infoStream,
+      productStream,
+      (packageInfo, productBean) {
+        // 伺服器上的 product 版本列表
+        _productListCache = productBean;
 
-      if (isProduct && appBuildType.isRelease) {
-        setAppBuildType(AppBuildType.product);
+        // 當前專案的版本
+        var currentVersionName = packageInfo.version;
+        var currentVersionCode = int.tryParse(packageInfo.buildNumber) ?? 0;
+
+        // 專案是否為 product
+        bool isProduct = _isReleaseVersionProduct(
+          verName: currentVersionName,
+          verCode: currentVersionCode,
+        );
+
+        return ProjectVersion(
+          name: packageInfo.version,
+          code: int.tryParse(packageInfo.buildNumber) ?? 0,
+          build: isProduct ? ProjectBuild.product : MxEnv.build,
+        );
+      },
+    ).doOnData((event) {
+      if (MxEnv.build != event.build) {
+        MxEnv._build = event.build;
+        MxEnv._buildChangeController.add(event.build);
       }
-
-      return CurrentVersionData(
-        packageInfo: packageInfo,
-        buildType: appBuildType,
-      );
-    }).flatMap((versionData) => _getVersion(appCode, versionData));
-  }
-
-  /// 執行下載更新APP
-  Future<void> updateApp(String url, {bool openWeb = true}) {
-    return AppUpdater.update(url, openWeb: openWeb);
-  }
-
-  /// 取得線上版本紀錄
-  Observable<ProductBean> _getProduct(String appCode) {
-    return _service
-        .getProduct(appCode)
-        .map((response) => BeanConverter.convert<ProductBean>(response.getString()));
-  }
-
-  /// 取得線上版本資訊
-  Observable<UpdateInfo> _getVersion(String appCode, CurrentVersionData versionData) {
-    bool isAndroid = Platform.isAndroid;
-
-    return _service
-        .getVersion(appCode, versionData.buildType.name)
-        .map((response) => BeanConverter.convert<WebVersionBean>(response.getString()))
-        .map((bean) {
-      Map<String, dynamic> configMap = _convertVersionConfigMap(bean);
-
-      // 對應手機系統bean
-      var platformBean = isAndroid ? bean?.android : bean?.ios;
-      // 線上最後版本
-      var latestVersion = platformBean?.versionCode;
-      // 是否忽略線上這個版本
-      var ignore = platformBean?.ignore ?? false;
-      // 更新url
-      var downloadUrl;
-      // 是否使用web開啟
-      var openWebDownload = false;
-
-      if (versionData.buildType.isProduct) {
-        downloadUrl = platformBean?.product?.url;
-        openWebDownload = platformBean?.product?.openWeb;
-      } else {
-        downloadUrl = platformBean?.dev?.url;
-        openWebDownload = platformBean?.dev?.openWeb;
-      }
-
-      return UpdateInfo(
-        needUpdate: !ignore && latestVersion > int.tryParse(versionData.packageInfo.buildNumber),
-        downloadUrl: downloadUrl,
-        configMap: configMap,
-        latestVersion: platformBean?.versionName,
-        latestVersionCode: platformBean?.versionCode,
-        updateMessage: platformBean?.message,
-        openWebDownload: openWebDownload,
-        buildType: versionData.buildType,
-        currentVersionCode: int.tryParse(versionData.packageInfo.buildNumber),
-        currentVersionName: versionData.packageInfo.version,
-        appCode: appCode,
-      );
     });
   }
 
-  /// 轉換自訂義configMap
-  Map<String, dynamic> _convertVersionConfigMap(WebVersionBean webVersionBean) {
-    if (webVersionBean.config == null) {
-      return null;
-    }
-
-    var json = webVersionBean.toJson();
-    Map<String, dynamic> configMap;
-
-    if (json is Map<String, dynamic> && json.containsKey("config")) {
-      configMap = json["config"];
-    }
-    return configMap;
+  /// 取得更新App資訊
+  Stream<UpdateInfo> getUpdateInfo() {
+    return updateProjectBuild().flatMap((value) => _getVersionInfo(value));
   }
-}
 
-class BuildTypeData {
-  /// 是否忽略觸發stream
-  final bool ignore;
+  /// 取得版本的發布列表
+  Stream<ProductBean> _getProductList() {
+    var requestFuture = _request.getProduct(MxEnv.appCode);
+    return Stream.fromFuture(requestFuture)
+        .map((response) => BeanConverter.convert<ProductBean>(response)!);
+  }
 
-  /// 專案環境
-  final AppBuildType appBuildType;
+  /// 取得線上版本資訊
+  Stream<UpdateInfo> _getVersionInfo(ProjectVersion currentVersion) {
+    var requestFuture = _request.getVersion(MxEnv.appCode, MxEnv.build.value);
+    return Stream.fromFuture(requestFuture)
+        .map((response) => BeanConverter.convert<WebVersionBean>(response)!)
+        .map((bean) =>
+            _convertToUpdateInfo(currentVersion: currentVersion, bean: bean));
+  }
 
-  BuildTypeData(this.ignore, this.appBuildType);
-}
+  /// ===================== 以下為資料轉換 =====================
+  ///
+  UpdateInfo _convertToUpdateInfo(
+      {required ProjectVersion currentVersion, required WebVersionBean bean}) {
+    Map<String, dynamic> configMap = bean.config ?? {};
 
-/// 當前版本相關資訊
-class CurrentVersionData {
-  /// 當前版本資訊
-  final PackageInfo packageInfo;
+    // 對應手機系統bean
+    var platformBean = Platform.isAndroid ? bean.android : bean.ios;
 
-  /// 打包類型
-  final AppBuildType buildType;
+    // 取得最新強制更新的版本號碼
+    var forceVersionCode = platformBean?.force ?? 0;
 
-  CurrentVersionData({this.packageInfo, this.buildType});
-}
+    // 此版本是否忽略
+    var ignore = platformBean?.ignore ?? false;
 
-class UpdateInfo {
-  /// 是否需要更新，true為需要更新
-  final bool needUpdate;
+    // 更新url
+    String updateUrl;
 
-  /// 是否採取開啟web更新
-  final bool openWebDownload;
+    // 是否使用web開啟
+    bool isUrlOpenWeb;
 
-  /// 下載更新檔案位置
-  final String downloadUrl;
+    if (currentVersion.isProduct) {
+      updateUrl = platformBean?.product?.url ?? '';
+      isUrlOpenWeb = platformBean?.product?.openWeb ?? true;
+    } else {
+      updateUrl = platformBean?.dev?.url ?? '';
+      isUrlOpenWeb = platformBean?.dev?.openWeb ?? true;
+    }
 
-  /// 線上最新版本號名稱
-  final String latestVersion;
+    var latestVersionName = platformBean?.versionName ?? '0.0.0';
+    var latestVersionCode = platformBean?.versionCode ?? 0;
 
-  /// 線上最新版本號
-  final int latestVersionCode;
+    // 專案是否為 product
+    late ProjectBuild lastBuild;
 
-  /// 更新內容
-  final String updateMessage;
+    if (currentVersion.build == ProjectBuild.debug) {
+      lastBuild = currentVersion.build;
+    } else {
+      var isProduct = _isReleaseVersionProduct(
+        verName: latestVersionName,
+        verCode: latestVersionCode,
+      );
+      lastBuild = isProduct ? ProjectBuild.product : ProjectBuild.release;
+    }
 
-  /// 自訂義設定檔
-  final Map<String, dynamic> configMap;
-
-  /// 當前專案版本號
-  final int currentVersionCode;
-
-  /// 當前專案版本名稱
-  final String currentVersionName;
-
-  /// 請求API時的buildType
-  final AppBuildType buildType;
-
-  /// 請求時API的appCode
-  final String appCode;
-
-  UpdateInfo({
-    this.needUpdate,
-    this.openWebDownload,
-    this.downloadUrl,
-    this.latestVersion,
-    this.latestVersionCode,
-    this.updateMessage,
-    this.configMap,
-    this.currentVersionCode,
-    this.currentVersionName,
-    this.buildType,
-    this.appCode,
-  });
+    return UpdateInfo(
+      appCode: MxEnv.appCode,
+      forceVersionCode: forceVersionCode,
+      isIgnore: ignore,
+      url: updateUrl,
+      configMap: configMap,
+      message: platformBean?.message ?? '',
+      openWeb: isUrlOpenWeb,
+      build: MxEnv.build,
+      current: currentVersion,
+      latest: ProjectVersion(
+        name: latestVersionName,
+        code: latestVersionCode,
+        build: lastBuild,
+      ),
+    );
+  }
 }

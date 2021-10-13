@@ -1,99 +1,97 @@
-import 'package:json_annotation/json_annotation.dart';
-import 'package:type_translator/type_translator.dart';
-part 'web_version.g.dart';
-
-@JsonSerializable()
 class WebVersionBean {
-  @JsonKey(
-      fromJson: WebVersionConfigBean._fromJson,
-      toJson: WebVersionConfigBean._toJson)
-  WebVersionConfigBean config;
-  @JsonKey(
-      fromJson: WebVersionAndroidBean._fromJson,
-      toJson: WebVersionAndroidBean._toJson)
-  WebVersionAndroidBean android;
-  @JsonKey(
-      fromJson: WebVersionAndroidBean._fromJson,
-      toJson: WebVersionAndroidBean._toJson)
-  WebVersionAndroidBean ios;
+  Map<String, dynamic>? config;
+  WebVersionAndroidBean? android;
+  WebVersionAndroidBean? ios;
 
-  WebVersionBean({this.config, this.android, this.ios});
-  factory WebVersionBean.fromJson(dynamic json) =>
-      json != null ? _$WebVersionBeanFromJson(json) : null;
+  WebVersionBean({
+    this.config,
+    this.android,
+    this.ios,
+  });
 
-  dynamic toJson() => _$WebVersionBeanToJson(this);
+  WebVersionBean.fromJson(Map<String, dynamic> json) {
+    config = json['config'];
+    android = json['android'] != null
+        ? WebVersionAndroidBean.fromJson(json['android'])
+        : null;
+    ios = json['ios'] != null
+        ? WebVersionAndroidBean.fromJson(json['ios'])
+        : null;
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'config': config,
+      'android': android?.toJson(),
+      'ios': ios?.toJson(),
+    };
+  }
 }
 
-@JsonSerializable()
 class WebVersionAndroidBean {
-  @JsonKey(fromJson: translateString)
-  String message;
-  @JsonKey(fromJson: translateString)
-  String versionName;
-  @JsonKey(fromJson: translateInt)
-  int versionCode;
-  @JsonKey(
-      fromJson: WebVersionAndroidDevBean._fromJson,
-      toJson: WebVersionAndroidDevBean._toJson)
-  WebVersionAndroidDevBean dev;
-  @JsonKey(
-      fromJson: WebVersionAndroidDevBean._fromJson,
-      toJson: WebVersionAndroidDevBean._toJson)
-  WebVersionAndroidDevBean product;
-  @JsonKey(fromJson: translateBool)
-  bool ignore;
+  String? message;
+  String? versionName;
+  int? versionCode;
+  WebVersionAndroidDevBean? dev;
+  WebVersionAndroidDevBean? product;
+  bool? ignore;
+  int? force;
 
-  WebVersionAndroidBean(
-      {this.message,
-      this.versionName,
-      this.versionCode,
-      this.dev,
-      this.product,
-      this.ignore});
-  factory WebVersionAndroidBean.fromJson(dynamic json) =>
-      json != null ? _$WebVersionAndroidBeanFromJson(json) : null;
+  WebVersionAndroidBean({
+    this.message,
+    this.versionName,
+    this.versionCode,
+    this.dev,
+    this.product,
+    this.ignore,
+    this.force,
+  });
 
-  static WebVersionAndroidBean _fromJson(dynamic json) =>
-      WebVersionAndroidBean.fromJson(json);
+  WebVersionAndroidBean.fromJson(Map<String, dynamic> json) {
+    message = json['message']?.toString();
+    versionName = json['versionName']?.toString();
+    versionCode = json['versionCode'];
+    dev = json['dev'] != null
+        ? WebVersionAndroidDevBean.fromJson(json['dev'])
+        : null;
+    product = json['product'] != null
+        ? WebVersionAndroidDevBean.fromJson(json['product'])
+        : null;
+    ignore = json['ignore'];
+    force = json['force'];
+  }
 
-  static dynamic _toJson(WebVersionAndroidBean instance) => instance.toJson();
-
-  dynamic toJson() => _$WebVersionAndroidBeanToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'message': message,
+      'versionName': versionName,
+      'versionCode': versionCode,
+      'dev': dev?.toJson(),
+      'product': product?.toJson(),
+      'ignore': ignore,
+      'force': force,
+    };
+  }
 }
 
-@JsonSerializable()
 class WebVersionAndroidDevBean {
-  @JsonKey(fromJson: translateString)
-  String url;
-  @JsonKey(fromJson: translateBool)
-  bool openWeb;
+  String? url;
+  bool? openWeb;
 
-  WebVersionAndroidDevBean({this.url, this.openWeb});
-  factory WebVersionAndroidDevBean.fromJson(dynamic json) =>
-      json != null ? _$WebVersionAndroidDevBeanFromJson(json) : null;
+  WebVersionAndroidDevBean({
+    this.url,
+    this.openWeb,
+  });
 
-  static WebVersionAndroidDevBean _fromJson(dynamic json) =>
-      WebVersionAndroidDevBean.fromJson(json);
+  WebVersionAndroidDevBean.fromJson(Map<String, dynamic> json) {
+    url = json['url']?.toString();
+    openWeb = json['openWeb'];
+  }
 
-  static dynamic _toJson(WebVersionAndroidDevBean instance) =>
-      instance.toJson();
-
-  dynamic toJson() => _$WebVersionAndroidDevBeanToJson(this);
-}
-
-@JsonSerializable()
-class WebVersionConfigBean {
-  @JsonKey(fromJson: translateString)
-  String web;
-
-  WebVersionConfigBean({this.web});
-  factory WebVersionConfigBean.fromJson(dynamic json) =>
-      json != null ? _$WebVersionConfigBeanFromJson(json) : null;
-
-  static WebVersionConfigBean _fromJson(dynamic json) =>
-      WebVersionConfigBean.fromJson(json);
-
-  static dynamic _toJson(WebVersionConfigBean instance) => instance.toJson();
-
-  dynamic toJson() => _$WebVersionConfigBeanToJson(this);
+  Map<String, dynamic> toJson() {
+    return {
+      'url': url,
+      'openWeb': openWeb,
+    };
+  }
 }

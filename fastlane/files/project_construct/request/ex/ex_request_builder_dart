@@ -1,6 +1,10 @@
-import 'package:mx_core/mx_core.dart';
+import 'dart:io' show ContentType;
 
-import 'ex_request_builder.api.dart';
+import 'package:meta/meta.dart';
+import 'package:mx_core/mx_core.dart';
+import 'package:rxdart/rxdart.dart';
+
+part 'ex_request_builder.api.dart';
 
 @Api()
 abstract class ExRequestInterface {
@@ -51,12 +55,12 @@ class ExRequestBuilder extends ExRequestApi {
   }
 
   @override
-  Map<String, String> queryParams(Map<String, String> client) {
+  Map<String, String>? queryParams(Map<String, String>? client) {
     return super.queryParams(client);
   }
 
   @override
-  Map<String, String> headers(Map<String, String> client) {
+  Map<String, String>? headers(Map<String, String>? client) {
     return super.headers(client);
   }
 
@@ -66,12 +70,12 @@ class ExRequestBuilder extends ExRequestApi {
   }
 
   @override
-  HttpBodyType bodyType(HttpBodyType client) {
+  HttpBodyType? bodyType(HttpBodyType? client) {
     return super.bodyType(client);
   }
 
   @override
-  HttpContentType contentType(HttpContentType client) {
+  HttpContentType? contentType(HttpContentType? client) {
     return super.contentType(client);
   }
 }

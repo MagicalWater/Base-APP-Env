@@ -1,41 +1,49 @@
-import 'package:mx_core/mx_core.dart';
-import 'package:mx_env/request/version_request_interface.api.dart';
-import 'package:mx_env/request/version_request_interface.dart';
+import 'dart:convert';
+import 'dart:io';
 
-class VersionRequestClient extends RequestClientBase with VersionRequestClientMixin {
-  static final _singleton = VersionRequestClient._internal();
+import 'version_request_builder.dart';
 
-  static VersionRequestClient getInstance() => _singleton;
+export 'version_request_builder.dart';
 
-  factory VersionRequestClient() => _singleton;
+class VersionRequestClient implements VersionRequestInterface {
+  String host = '';
+  String scheme = '';
 
-  VersionRequestClient._internal() : super();
+  Uri _getUrl(String path) => Uri(scheme: scheme, host: host, path: path);
 
-  /// 初始化 request 構建
   @override
-  List<RequestBuilderBase> builders() {
-    return [
-      versionRequestApi = VersionRequestBuilder(),
-    ];
+  Future<String> getProduct(String appCode) {
+    var path = '/web/$appCode/product.json';
+    var url = _getUrl(path);
+    print('開始取得發布文件 - [GET] $url');
+    return HttpClient().getUrl(url).then((value) {
+      return value.close();
+    }).then((value) {
+      if (value.statusCode != 200) {
+        var errorText = '${value.statusCode}(${value.reasonPhrase})';
+        print('錯誤: 獲取發布文件出錯 - $errorText');
+        throw errorText;
+      } else {
+        return value.transform(utf8.decoder).single;
+      }
+    });
   }
 
   @override
-  String scheme() {
-    return "https";
-  }
-
-  @override
-  String host() {
-    return "apps99.cc";
-  }
-
-  @override
-  Map<String, String> headers() {
-    return super.headers();
-  }
-
-  @override
-  Map<String, String> queryParams() {
-    return super.queryParams();
+  Future<String> getVersion(String appCode, String buildType) {
+    var path = '/web/$appCode/$buildType/version.json';
+    var url = _getUrl(path);
+    print('開始取得版本文件 - [GET] $url');
+    return HttpClient().getUrl(url).then((value) {
+      return value.close();
+    }).then((value) {
+      if (value.statusCode != 200) {
+        var errorText = '${value.statusCode}(${value.reasonPhrase})';
+        print('錯誤: 獲取版本文件出錯 - $errorText');
+        throw errorText;
+      } else {
+        return value.transform(utf8.decoder).single;
+      }
+    });
   }
 }

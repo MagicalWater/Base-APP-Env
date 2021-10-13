@@ -36,12 +36,15 @@ class ExamplePage extends StatefulWidget {
 class _ExamplePageState extends State<ExamplePage> {
   @override
   void initState() {
+    MxEnv.settingProject(
+      appCode: 'viIntl',
+      build: ProjectBuild.release,
+      url: Uri(
+        scheme: 'https',
+        host: 'download.ucx99.com',
+      ),
+    );
     super.initState();
-
-    VersionRepository.getInstance().buildTypeStream.listen((v) {
-      print("buildTypeStream ${v.name}");
-    });
-    VersionRepository.getInstance().setAppBuildType(AppBuildType.release, ignore: true);
   }
 
   @override
@@ -56,35 +59,9 @@ class _ExamplePageState extends State<ExamplePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          VersionRepository().getUpdateInfo("streamDo").listen(
+          MxEnv.getUpdateInfo().listen(
             (updateInfo) {
-              var a = updateInfo;
-              if (updateInfo.needUpdate) {
-                showDialog(
-                  context: context,
-                  barrierDismissible: false,
-                  builder: (context) => UpdateVersionPopup(
-                    updateInfo,
-//                    titleWidget: Column(
-//                      children: <Widget>[
-//                        Image.asset("assets/images/ic_update_version.png"),
-//                        Text(
-//                          "${updateInfo.latestVersionCode}",
-//                          style: TextStyle(color: Colors.red),
-//                        ),
-//                      ],
-//                    ),
-//                    progressWidgetBuilder: (context, progress, total) {
-//                      return Align(
-//                        alignment: Alignment.center,
-//                        child: Text(
-//                          "我正在${(progress / total * 100).toInt()}%",
-//                        ),
-//                      );
-//                    },
-                  ),
-                );
-              }
+              print('更新資訊: $updateInfo');
             },
           );
         },

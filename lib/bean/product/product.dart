@@ -1,56 +1,51 @@
-import 'package:json_annotation/json_annotation.dart';
-import 'package:type_translator/type_translator.dart';
-part 'product.g.dart';
-
-@JsonSerializable()
 class ProductBean {
-  @JsonKey(
-      fromJson: _FromJsonWrapper._fromJsonList$ProductAndroidList0Bean$,
-      toJson: _ToJsonWrapper._toJsonList$ProductAndroidList0Bean$)
-  List<ProductAndroidList0Bean> android;
-  @JsonKey(
-      fromJson: _FromJsonWrapper._fromJsonList$ProductAndroidList0Bean$,
-      toJson: _ToJsonWrapper._toJsonList$ProductAndroidList0Bean$)
-  List<ProductAndroidList0Bean> ios;
+  List<ProductAndroidBean>? android;
+  List<ProductAndroidBean>? ios;
 
-  ProductBean({this.android, this.ios});
-  factory ProductBean.fromJson(dynamic json) =>
-      json != null ? _$ProductBeanFromJson(json) : null;
+  ProductBean({
+    this.android,
+    this.ios,
+  });
 
-  dynamic toJson() => _$ProductBeanToJson(this);
-}
+  ProductBean.fromJson(Map<String, dynamic> json) {
+    if (json['android'] != null) {
+      android = (json['android'] as List)
+          .map((e) => ProductAndroidBean.fromJson(e))
+          .toList();
+    }
+    if (json['ios'] != null) {
+      ios = (json['ios'] as List)
+          .map((e) => ProductAndroidBean.fromJson(e))
+          .toList();
+    }
+  }
 
-@JsonSerializable()
-class ProductAndroidList0Bean {
-  @JsonKey(fromJson: translateString)
-  String versionName;
-  @JsonKey(fromJson: translateInt)
-  int versionCode;
-
-  ProductAndroidList0Bean({this.versionName, this.versionCode});
-  factory ProductAndroidList0Bean.fromJson(dynamic json) =>
-      json != null ? _$ProductAndroidList0BeanFromJson(json) : null;
-
-  static ProductAndroidList0Bean _fromJson(dynamic json) =>
-      ProductAndroidList0Bean.fromJson(json);
-
-  static dynamic _toJson(ProductAndroidList0Bean instance) => instance.toJson();
-
-  dynamic toJson() => _$ProductAndroidList0BeanToJson(this);
-}
-
-class _FromJsonWrapper {
-  static List<ProductAndroidList0Bean> _fromJsonList$ProductAndroidList0Bean$(
-      dynamic json) {
-    if (json == null) return [];
-    return (json as List)
-        .map((json) => ProductAndroidList0Bean.fromJson(json))
-        .toList();
+  Map<String, dynamic> toJson() {
+    return {
+      'android': android?.map((e) => e.toJson()).toList(),
+      'ios': ios?.map((e) => e.toJson()).toList(),
+    };
   }
 }
 
-class _ToJsonWrapper {
-  static dynamic _toJsonList$ProductAndroidList0Bean$(
-          List<ProductAndroidList0Bean> instance) =>
-      instance.map((instance) => instance.toJson()).toList();
+class ProductAndroidBean {
+  String? versionName;
+  int? versionCode;
+
+  ProductAndroidBean({
+    this.versionName,
+    this.versionCode,
+  });
+
+  ProductAndroidBean.fromJson(Map<String, dynamic> json) {
+    versionName = json['versionName']?.toString();
+    versionCode = json['versionCode'];
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'versionName': versionName,
+      'versionCode': versionCode,
+    };
+  }
 }

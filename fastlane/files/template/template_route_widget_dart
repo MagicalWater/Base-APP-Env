@@ -1,7 +1,7 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:mx_core/mx_core.dart';
 
-import 'route.dart';
+import 'routes.dart';
 
 /// 儲存所有 route 對應的 page widget
 class RouteWidget implements RouteWidgetBase {
@@ -19,14 +19,18 @@ class RouteWidget implements RouteWidgetBase {
   ];
 
   @override
-  Widget getPage(RouteData data) {
+  Widget getPage(RouteData data, {Key? key}) {
     final widgetOption = data.copyWith(RouteDataType.widget);
     final blocOption = data.copyWith(RouteDataType.bloc);
-    final child = AppRoute.getPage(widgetOption);
     switch (data.route) {
       default:
         print("找無對應的 page, ${data.route}");
-        return null;
+        return Scaffold(
+          appBar: AppBar(),
+          body: Center(
+            child: Text('NOT FOUND'),
+          ),
+        );
     }
   }
 }

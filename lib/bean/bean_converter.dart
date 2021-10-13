@@ -15,9 +15,9 @@ class BeanConverter {
   /// - Function(dynamic)
   /// - 當 onError 返回 T 類型時, 將以此值回傳, 否則回傳 null
   /// - 若 onError 不處理或需要再拋出錯誤, 再 onError 裡面直接 throw 即可
-  static T convert<T>(
+  static T? convert<T>(
     String jsonString, {
-    Function onError,
+    Function? onError,
   }) {
     return _convert(
       jsonString,
@@ -25,9 +25,9 @@ class BeanConverter {
     );
   }
 
-  static T _convert<T>(
+  static T? _convert<T>(
     String jsonString, {
-    Function onError,
+    Function? onError,
   }) {
     var jsonConvert;
     try {
@@ -37,7 +37,7 @@ class BeanConverter {
       return handleError<T>(onError, error, stack);
     }
 
-    T bean;
+    T? bean;
 
     /// 首先反序列化
     try {
@@ -60,8 +60,8 @@ class BeanConverter {
   }
 
   /// 發生錯誤之後跳入此處進行處理
-  static T handleError<T>(
-      Function onError, dynamic error, StackTrace stackTrace) {
+  static T? handleError<T>(
+      Function? onError, dynamic error, StackTrace stackTrace) {
     if (onError == null) {
       print("BeanConverter 錯誤: $error");
       throw error;

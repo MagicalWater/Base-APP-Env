@@ -1,0 +1,28 @@
+PODS:
+  - Flutter (1.0.0)
+  - mx_env (0.0.1):
+    - Flutter
+  - package_info_plus (0.4.5):
+    - Flutter
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - mx_env (from `.symlinks/plugins/mx_env/ios`)
+  - package_info_plus (from `.symlinks/plugins/package_info_plus/ios`)
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  mx_env:
+    :path: ".symlinks/plugins/mx_env/ios"
+  package_info_plus:
+    :path: ".symlinks/plugins/package_info_plus/ios"
+
+SPEC CHECKSUMS:
+  Flutter: 50d75fe2f02b26cc09d224853bb45737f8b3214a
+  mx_env: 576b23fabe0f9d3e8b5fc861879d539d3616f77f
+  package_info_plus: 6c92f08e1f853dc01228d6f553146438dafcd14e
+
+PODFILE CHECKSUM: aafe91acc616949ddb318b77800a7f51bffa2a4c
+
+COCOAPODS: 1.10.1
