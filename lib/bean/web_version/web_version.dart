@@ -1,34 +1,28 @@
 class WebVersionBean {
   Map<String, dynamic>? config;
-  WebVersionAndroidBean? android;
-  WebVersionAndroidBean? ios;
+  WebVersionPackageBean? package;
 
   WebVersionBean({
     this.config,
-    this.android,
-    this.ios,
+    this.package,
   });
 
   WebVersionBean.fromJson(Map<String, dynamic> json) {
     config = json['config'];
-    android = json['android'] != null
-        ? WebVersionAndroidBean.fromJson(json['android'])
-        : null;
-    ios = json['ios'] != null
-        ? WebVersionAndroidBean.fromJson(json['ios'])
+    package = json['package'] != null
+        ? WebVersionPackageBean.fromJson(json['package'])
         : null;
   }
 
   Map<String, dynamic> toJson() {
     return {
       'config': config,
-      'android': android?.toJson(),
-      'ios': ios?.toJson(),
+      'package': package?.toJson(),
     };
   }
 }
 
-class WebVersionAndroidBean {
+class WebVersionPackageBean {
   String? message;
   String? versionName;
   int? versionCode;
@@ -37,7 +31,7 @@ class WebVersionAndroidBean {
   bool? ignore;
   int? force;
 
-  WebVersionAndroidBean({
+  WebVersionPackageBean({
     this.message,
     this.versionName,
     this.versionCode,
@@ -47,7 +41,7 @@ class WebVersionAndroidBean {
     this.force,
   });
 
-  WebVersionAndroidBean.fromJson(Map<String, dynamic> json) {
+  WebVersionPackageBean.fromJson(Map<String, dynamic> json) {
     message = json['message']?.toString();
     versionName = json['versionName']?.toString();
     versionCode = json['versionCode'];

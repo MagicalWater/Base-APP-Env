@@ -96,14 +96,13 @@ class _VersionRepository {
       {required ProjectVersion currentVersion, required WebVersionBean bean}) {
     Map<String, dynamic> configMap = bean.config ?? {};
 
-    // 對應手機系統bean
-    var platformBean = Platform.isAndroid ? bean.android : bean.ios;
+    final platformBean = bean.package;
 
     // 取得最新強制更新的版本號碼
-    var forceVersionCode = platformBean?.force ?? 0;
+    final forceVersionCode = platformBean?.force ?? 0;
 
     // 此版本是否忽略
-    var ignore = platformBean?.ignore ?? false;
+    final ignore = platformBean?.ignore ?? false;
 
     // 更新url
     String updateUrl;

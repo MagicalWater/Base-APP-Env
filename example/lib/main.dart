@@ -37,7 +37,7 @@ class _ExamplePageState extends State<ExamplePage> {
   @override
   void initState() {
     MxEnv.settingProject(
-      appCode: 'viIntl',
+      appCode: 'futures04',
       build: ProjectBuild.release,
       url: Uri(
         scheme: 'https',

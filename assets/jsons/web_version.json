@@ -1,22 +1,7 @@
 {
   "config": {
   },
-  "android": {
-    "message": "",
-    "versionName": "0.1.3",
-    "versionCode": 13,
-    "dev": {
-      "url": "http://www.google.com",
-      "openWeb": true
-    },
-    "product": {
-      "url": "http://www.google.com",
-      "openWeb": true
-    },
-    "ignore": false,
-    "force": 0
-  },
-  "ios": {
+  "package": {
     "message": "",
     "versionName": "0.1.3",
     "versionCode": 13,

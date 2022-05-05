@@ -31,7 +31,8 @@ class VersionRequestClient implements VersionRequestInterface {
 
   @override
   Future<String> getVersion(String appCode, String buildType) {
-    var path = '/web/$appCode/$buildType/version.json';
+    final platformTag = Platform.isAndroid ? 'android' : 'ios';
+    var path = '/web/$appCode/$buildType/$platformTag/version.json';
     var url = _getUrl(path);
     print('開始取得版本文件 - [GET] $url');
     return HttpClient().getUrl(url).then((value) {
