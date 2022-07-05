@@ -37,12 +37,13 @@ class _ExamplePageState extends State<ExamplePage> {
   @override
   void initState() {
     MxEnv.settingProject(
-      appCode: 'futures04',
+      appCode: 'futuresApp',
       build: ProjectBuild.release,
       url: Uri(
         scheme: 'https',
         host: 'download.ucx99.com',
       ),
+      forceProductIf: true,
     );
     super.initState();
   }
@@ -59,7 +60,7 @@ class _ExamplePageState extends State<ExamplePage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          MxEnv.getUpdateInfo().listen(
+          MxEnv.getUpdateInfo().then(
             (updateInfo) {
               print('更新資訊: $updateInfo');
             },

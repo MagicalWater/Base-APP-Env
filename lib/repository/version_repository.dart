@@ -2,98 +2,155 @@ part of 'package:mx_env/mx_env.dart';
 
 /// 版本相關倉庫
 class _VersionRepository {
-  final _request = VersionRequestClient();
+  final _request = VersionRequest();
 
-  ProductBean? _productListCache;
-
-  /// 檢查版本是否為product版本
-  bool _isReleaseVersionProduct(
-      {required String verName, required int verCode}) {
-    var webProducts = (Platform.isAndroid
-            ? _productListCache!.android
-            : _productListCache!.ios) ??
-        [];
-
-    // 專案是否為 product
-    bool isProduct = webProducts.any((product) {
-      var code = product.versionCode;
-      var name = product.versionName;
-      return code == verCode && name == verName;
-    });
-
-    return isProduct;
-  }
+  // 發布列表本地的快取key
+  final _productListKey = 'productList';
 
   void _setUrl(Uri url) {
     _request.host = url.host;
     _request.scheme = url.scheme;
   }
 
-  /// 更新專案環境
-  /// 當專案版本為 [ProjectBuild.release] 時, 檢查版本號是否為 product 版本
-  /// 若檢查為 product, 則會自動更改 [MxEnv.build] 的值
-  Stream<ProjectVersion> updateProjectBuild() {
-    Stream<PackageInfo> infoStream =
-        Stream.fromFuture(PackageInfo.fromPlatform());
-
-    Stream<ProductBean> productStream = _getProductList();
-
-    return ZipStream.zip2<PackageInfo, ProductBean, ProjectVersion>(
-      infoStream,
-      productStream,
-      (packageInfo, productBean) {
-        // 伺服器上的 product 版本列表
-        _productListCache = productBean;
-
-        // 當前專案的版本
-        var currentVersionName = packageInfo.version;
-        var currentVersionCode = int.tryParse(packageInfo.buildNumber) ?? 0;
-
-        // 專案是否為 product
-        bool isProduct = _isReleaseVersionProduct(
-          verName: currentVersionName,
-          verCode: currentVersionCode,
-        );
-
-        return ProjectVersion(
-          name: packageInfo.version,
-          code: int.tryParse(packageInfo.buildNumber) ?? 0,
-          build: isProduct ? ProjectBuild.product : MxEnv.build,
-        );
-      },
-    ).doOnData((event) {
-      if (MxEnv.build != event.build) {
-        MxEnv._build = event.build;
-        MxEnv._buildChangeController.add(event.build);
+  /// 取得專案版本
+  /// 當專案版本為 [ProjectBuild.release] 時, 會再檢查版本號是否為 product 版本
+  Future<ProjectVersion> getProjectVersion(String appCode, ProjectBuild build) {
+    /// 檢查版本是否為product版本
+    bool isProductVersion({
+      required ProductBean productBean,
+      required String verName,
+      required int verCode,
+    }) {
+      if (build == ProjectBuild.debug) {
+        return false;
       }
+
+      final webProducts =
+          (Platform.isAndroid ? productBean.android : productBean.ios) ?? [];
+
+      // 專案是否為 product
+      final isProduct = webProducts.any((product) {
+        var code = product.versionCode;
+        var name = product.versionName;
+        return code == verCode && name == verName;
+      });
+
+      return isProduct;
+    }
+
+    /// 取得版本的發布列表
+    Future<ProductBean> _getProductList() {
+      HttpClientResponse? response;
+      return _request
+          .getProduct(appCode)
+          .then((value) {
+            response = value;
+            return value.transform(utf8.decoder).single;
+          })
+          .then((value) => BeanConverter.convert<ProductBean>(value)!)
+          .onError((error, stackTrace) {
+            if (response?.statusCode != 200) {
+              final errorText =
+                  '${response?.statusCode}(${response?.reasonPhrase})';
+              print('錯誤: 獲取發布文件出錯 - $errorText');
+            }
+            return Future.error(error!, stackTrace);
+          })
+          .then((value) {
+            print('將發布版本資料存入本地');
+            print('${value.ios?.map((e) => '${e.versionName}+${e.versionCode}')}');
+            // 將資料存入本地
+            final jsonData = value.toJson();
+            final jsonString = json.encode(jsonData);
+
+            return SharedPreferences.getInstance().then((preference) {
+              return preference.setString(_productListKey, jsonString);
+            }).then((_) => value);
+          })
+          .onError((error, stackTrace) {
+            // 嘗試從本地取出
+            print('更改為嘗試從本地取出發布列表');
+            return SharedPreferences.getInstance().then((preference) {
+              return preference.getString(_productListKey);
+            }).then((value) {
+              if (value != null && value.isNotEmpty) {
+                final jsonData = json.decode(value);
+                final bean = ProductBean.fromJson(jsonData);
+                print('成功取出本地發布列表');
+                print('${bean.ios?.map((e) => '${e.versionName}+${e.versionCode}')}');
+                return bean;
+              } else {
+                print('本地無快取, 直接拋出錯誤');
+              }
+              return Future.error(error!, stackTrace);
+            });
+          });
+    }
+
+    final infoFuture = PackageInfo.fromPlatform();
+
+    final productFuture = _getProductList();
+
+    return Future.wait([
+      infoFuture,
+      productFuture,
+    ]).then((value) {
+      final packageInfo = value[0] as PackageInfo;
+      final productBean = value[1] as ProductBean;
+
+      // 當前專案的版本
+      final currentVersionName = packageInfo.version;
+      final currentVersionCode = int.tryParse(packageInfo.buildNumber) ?? 0;
+
+      // 專案是否為 product
+      final isProduct = isProductVersion(
+        productBean: productBean,
+        verName: currentVersionName,
+        verCode: currentVersionCode,
+      );
+
+      return ProjectVersion(
+        name: packageInfo.version,
+        code: int.tryParse(packageInfo.buildNumber) ?? 0,
+        build: isProduct ? ProjectBuild.product : build,
+      );
     });
   }
 
-  /// 取得更新App資訊
-  Stream<UpdateInfo> getUpdateInfo() {
-    return updateProjectBuild().flatMap((value) => _getVersionInfo(value));
-  }
-
-  /// 取得版本的發布列表
-  Stream<ProductBean> _getProductList() {
-    var requestFuture = _request.getProduct(MxEnv.appCode);
-    return Stream.fromFuture(requestFuture)
-        .map((response) => BeanConverter.convert<ProductBean>(response)!);
-  }
-
-  /// 取得線上版本資訊
-  Stream<UpdateInfo> _getVersionInfo(ProjectVersion currentVersion) {
-    var requestFuture = _request.getVersion(MxEnv.appCode, MxEnv.build.value);
-    return Stream.fromFuture(requestFuture)
-        .map((response) => BeanConverter.convert<WebVersionBean>(response)!)
-        .map((bean) =>
-            _convertToUpdateInfo(currentVersion: currentVersion, bean: bean));
+  /// 檢查線上版本, 並且取得更新資訊
+  Future<UpdateInfo> getUpdateInfoFromWeb(
+    String appCode,
+    ProjectVersion projectVersion,
+  ) {
+    HttpClientResponse? response;
+    return _request
+        .getVersion(appCode, projectVersion.build.value)
+        .then((value) {
+          response = value;
+          return value.transform(utf8.decoder).single;
+        })
+        .then((value) => BeanConverter.convert<WebVersionBean>(value)!)
+        .onError((error, stackTrace) {
+          if (response?.statusCode != 200) {
+            final errorText =
+                '${response?.statusCode}(${response?.reasonPhrase})';
+            print('錯誤: 獲取版本文件出錯 - $errorText');
+          }
+          return Future.error(error!, stackTrace);
+        })
+        .then((value) => _convertToUpdateInfo(
+              appCode: appCode,
+              currentVersion: projectVersion,
+              bean: value,
+            ));
   }
 
   /// ===================== 以下為資料轉換 =====================
-  ///
-  UpdateInfo _convertToUpdateInfo(
-      {required ProjectVersion currentVersion, required WebVersionBean bean}) {
+  UpdateInfo _convertToUpdateInfo({
+    required String appCode,
+    required ProjectVersion currentVersion,
+    required WebVersionBean bean,
+  }) {
     Map<String, dynamic> configMap = bean.config ?? {};
 
     final platformBean = bean.package;
@@ -118,36 +175,23 @@ class _VersionRepository {
       isUrlOpenWeb = platformBean?.dev?.openWeb ?? true;
     }
 
-    var latestVersionName = platformBean?.versionName ?? '0.0.0';
-    var latestVersionCode = platformBean?.versionCode ?? 0;
-
-    // 專案是否為 product
-    late ProjectBuild lastBuild;
-
-    if (currentVersion.build == ProjectBuild.debug) {
-      lastBuild = currentVersion.build;
-    } else {
-      var isProduct = _isReleaseVersionProduct(
-        verName: latestVersionName,
-        verCode: latestVersionCode,
-      );
-      lastBuild = isProduct ? ProjectBuild.product : ProjectBuild.release;
-    }
+    final latestVersionName = platformBean?.versionName ?? '0.0.0';
+    final latestVersionCode = platformBean?.versionCode ?? 0;
 
     return UpdateInfo(
-      appCode: MxEnv.appCode,
+      appCode: appCode,
       forceVersionCode: forceVersionCode,
       isIgnore: ignore,
       url: updateUrl,
       configMap: configMap,
       message: platformBean?.message ?? '',
       openWeb: isUrlOpenWeb,
-      build: MxEnv.build,
+      build: currentVersion.build,
       current: currentVersion,
       latest: ProjectVersion(
         name: latestVersionName,
         code: latestVersionCode,
-        build: lastBuild,
+        build: currentVersion.build,
       ),
     );
   }

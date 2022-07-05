@@ -1,14 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/cupertino.dart';
 import 'package:mx_env/bean/bean_converter.dart';
 import 'package:mx_env/model/project_version.dart';
 import 'package:mx_env/model/update_info.dart';
-import 'package:mx_env/request/version_request_client.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'package:rxdart/rxdart.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'model/project_build.dart';
+import 'request/version_request_interface.dart';
 
 export 'model/project_build.dart';
 export 'model/update_info.dart';
@@ -36,11 +38,10 @@ class MxEnv {
   /// 上次更新的暫存資訊
   static UpdateInfo? _latestInfo;
 
-  static _VersionRepository _repository = _VersionRepository();
+  static final _VersionRepository _repository = _VersionRepository();
 
   // ignore: close_sinks
-  static StreamController<ProjectBuild> _buildChangeController =
-      StreamController();
+  static final _buildChangeController = StreamController<ProjectBuild>();
 
   /// [build] 賦值時的串流
   static final Stream<ProjectBuild> buildStream =
@@ -51,10 +52,13 @@ class MxEnv {
   /// 後續根據下載的文件完整網址如下
   /// product文件 - [url]/web/[appCode]/[build.value]/version.json
   /// version文件 - [url]/web/[appCode]/product.json
+  ///
+  /// [forceProductIf]
   static void settingProject({
     required String appCode,
     required ProjectBuild build,
     required Uri url,
+    required bool forceProductIf,
   }) {
     print('配置專案環境 $appCode(${build.value}) - $url');
     _appCode = appCode;
@@ -64,9 +68,21 @@ class MxEnv {
   }
 
   /// 取得更新資訊
-  static Stream<UpdateInfo> getUpdateInfo() {
-    return _repository.getUpdateInfo().doOnData((event) {
-      _latestInfo = event;
-    });
+  static Future<UpdateInfo> getUpdateInfo() {
+    // 先取得發布列表資訊, 在檢查版本資訊
+    return _repository
+        .getProjectVersion(appCode, build)
+        .then((value) {
+          if (build != value.build) {
+            _build = value.build;
+            _buildChangeController.add(value.build);
+          }
+          return value;
+        })
+        .then((value) => _repository.getUpdateInfoFromWeb(appCode, value))
+        .then((value) {
+          _latestInfo = value;
+          return value;
+        });
   }
 }
