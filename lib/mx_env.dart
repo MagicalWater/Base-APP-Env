@@ -58,7 +58,6 @@ class MxEnv {
     required String appCode,
     required ProjectBuild build,
     required Uri url,
-    required bool forceProductIf,
   }) {
     print('配置專案環境 $appCode(${build.value}) - $url');
     _appCode = appCode;

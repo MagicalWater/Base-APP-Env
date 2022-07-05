@@ -43,7 +43,6 @@ class _ExamplePageState extends State<ExamplePage> {
         scheme: 'https',
         host: 'download.ucx99.com',
       ),
-      forceProductIf: true,
     );
     super.initState();
   }
